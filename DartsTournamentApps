@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Organisateur de Tournoi - Matchs à 4</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .phase {
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        h2 {
+            margin-top: 0;
+            color: #444;
+        }
+        .pool {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .pool-group {
+            flex: 1;
+            min-width: 250px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: white;
+        }
+        .pool-group h3 {
+            margin-top: 0;
+            text-align: center;
+            color: #555;
+        }
+        .player {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px;
+            margin: 5px 0;
+            background-color: #eee;
+            border-radius: 3px;
+        }
+        .player input {
+            flex: 1;
+            padding: 5px;
+            margin-right: 10px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .player .points {
+            width: 40px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .match {
+            display: flex;
+            flex-direction: column;
+            padding: 15px;
+            margin: 10px 0;
+            background-color: #e7f3ff;
+            border-radius: 5px;
+        }
+        .match h4 {
+            margin-top: 0;
+            text-align: center;
+        }
+        .match-result {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .match-result div {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .match-result input {
+            width: 150px;
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .match-result select {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        button {
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .bracket {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        .bracket-round {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .bracket-match {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: white;
+            min-width: 150px;
+        }
+        .bracket-match .teams {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            margin-bottom: 10px;
+        }
+        .bracket-match .team {
+            padding: 5px;
+            text-align: center;
+            background-color: #eee;
+            border-radius: 3px;
+        }
+        .bracket-match .winner {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .bracket-match input {
+            width: 100%;
+            padding: 5px;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+        .bracket-match button {
+            padding: 5px 10px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+        }
+        .bracket-match button:hover {
+            background-color: #0b7dda;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .controls button {
+            padding: 10px 20px;
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .controls button:hover {
+            background-color: #0b7dda;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Organisateur de Tournoi - Matchs à 4</h1>
+        
+        <!-- Phase de Poules -->
+        <div class="phase" id="pool-phase">
+            <h2>Phase de Poules (3 matchs par pool)</h2>
+            <div class="pool" id="pools-container">
+                <!-- Les pools seront générés dynamiquement -->
+            </div>
+            <div class="controls">
+                <button onclick="generatePoolMatches()">Générer les matchs de poule</button>
+                <button onclick="finalizePoolPhase()" class="hidden" id="finalize-pool-btn">Finaliser la phase de poule</button>
+            </div>
+            <div id="pool-matches-container"></div>
+        </div>
+
+        <!-- Phase Finale -->
+        <div class="phase hidden" id="final-phase">
+            <h2>Phase Finale (Bracket)</h2>
+            <div class="bracket" id="bracket-container">
+                <!-- Le bracket sera généré dynamiquement -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Données du tournoi
+        const tournament = {
+            pools: [],
+            poolMatches: [],
+            finalBracket: [],
+            currentRound: 0
+        };
+
+        // Initialisation des pools
+        function initPools() {
+            const poolsContainer = document.getElementById('pools-container');
+            poolsContainer.innerHTML = '';
+            
+            for (let i = 0; i < 4; i++) {
+                const pool = {
+                    id: i + 1,
+                    name: `Pool ${String.fromCharCode(65 + i)}`,
+                    players: [
+                        { id: 1, name: '', totalPoints: 0 },
+                        { id: 2, name: '', totalPoints: 0 },
+                        { id: 3, name: '', totalPoints: 0 },
+                        { id: 4, name: '', totalPoints: 0 }
+                    ],
+                    matches: []
+                };
+                tournament.pools.push(pool);
+                
+                const poolDiv = document.createElement('div');
+                poolDiv.className = 'pool-group';
+                poolDiv.innerHTML = `
+                    <h3>${pool.name}</h3>
+                    ${pool.players.map((player, index) => `
+                        <div class="player">
+                            <input type="text" placeholder="Joueur ${index + 1}" 
+                                   onchange="updatePlayerName(${i}, ${index}, this.value)">
+                            <span class="points" id="points-${i}-${index}">0</span>
+                        </div>
+                    `).join('')}
+                `;
+                poolsContainer.appendChild(poolDiv);
+            }
+        }
+
+        // Mise à jour du nom d'un joueur
+        function updatePlayerName(poolIndex, playerIndex, name) {
+            tournament.pools[poolIndex].players[playerIndex].name = name;
+        }
+
+        // Génération des matchs de poule (3 matchs par pool)
+        function generatePoolMatches() {
+            const matchesContainer = document.getElementById('pool-matches-container');
+            matchesContainer.innerHTML = '';
+            
+            tournament.pools.forEach((pool, poolIndex) => {
+                const poolMatchesDiv = document.createElement('div');
+                poolMatchesDiv.className = 'pool-group';
+                poolMatchesDiv.innerHTML = `<h3>Matchs - ${pool.name}</h3>`;
+                
+                // 3 matchs par pool
+                for (let matchNum = 1; matchNum <= 3; matchNum++) {
+                    const matchDiv = document.createElement('div');
+                    matchDiv.className = 'match';
+                    matchDiv.innerHTML = `
+                        <h4>Match ${matchNum}</h4>
+                        <div class="match-result">
+                            ${pool.players.map((player, index) => `
+                                <div>
+                                    <input type="text" value="${player.name || 'Joueur ' + (index + 1)}" readonly>
+                                    <select id="rank-${poolIndex}-${matchNum}-${index}">
+                                        <option value="0">--</option>
+                                        <option value="1">1er (3 pts)</option>
+                                        <option value="2">2e (2 pts)</option>
+                                        <option value="3">3e (1 pt)</option>
+                                        <option value="4">4e (0 pt)</option>
+                                    </select>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button onclick="recordPoolMatch(${poolIndex}, ${matchNum - 1})">Enregistrer le match</button>
+                    `;
+                    poolMatchesDiv.appendChild(matchDiv);
+                }
+                matchesContainer.appendChild(poolMatchesDiv);
+            });
+            
+            document.getElementById('finalize-pool-btn').classList.remove('hidden');
+        }
+
+        // Enregistrement du résultat d'un match de poule
+        function recordPoolMatch(poolIndex, matchIndex) {
+            const pool = tournament.pools[poolIndex];
+            const matchResults = [];
+            
+            // Récupérer les rangs sélectionnés
+            for (let i = 0; i < pool.players.length; i++) {
+                const rank = parseInt(document.getElementById(`rank-${poolIndex}-${matchIndex + 1}-${i}`).value);
+                matchResults.push({ playerIndex: i, rank: rank });
+            }
+            
+            // Vérifier que tous les rangs sont uniques et valides
+            const ranks = matchResults.map(r => r.rank);
+            if (new Set(ranks).size !== 4 || !ranks.includes(1) || !ranks.includes(2) || !ranks.includes(3) || !ranks.includes(4)) {
+                alert("Veuillez attribuer un rang unique (1 à 4) à chaque joueur.");
+                return;
+            }
+            
+            // Attribuer les points
+            matchResults.forEach(result => {
+                const player = pool.players[result.playerIndex];
+                switch (result.rank) {
+                    case 1: player.totalPoints += 3; break;
+                    case 2: player.totalPoints += 2; break;
+                    case 3: player.totalPoints += 1; break;
+                    case 4: player.totalPoints += 0; break;
+                }
+            });
+            
+            // Mise à jour de l'affichage des points
+            updatePoolPoints(poolIndex);
+        }
+
+        // Mise à jour des points des joueurs dans un pool
+        function updatePoolPoints(poolIndex) {
+            const pool = tournament.pools[poolIndex];
+            pool.players.forEach((player, index) => {
+                document.getElementById(`points-${poolIndex}-${index}`).textContent = player.totalPoints;
+            });
+        }
+
+        // Finalisation de la phase de poule
+        function finalizePoolPhase() {
+            // Trier les joueurs de chaque pool par points
+            tournament.pools.forEach(pool => {
+                pool.players.sort((a, b) => b.totalPoints - a.totalPoints);
+            });
+            
+            // Récupérer les 2 premiers de chaque pool pour la phase finale
+            const finalists = [];
+            tournament.pools.forEach(pool => {
+                finalists.push(pool.players[0]);
+                finalists.push(pool.players[1]);
+            });
+            
+            // Générer le bracket
+            generateBracket(finalists);
+            
+            // Masquer la phase de poule et afficher la phase finale
+            document.getElementById('pool-phase').classList.add('hidden');
+            document.getElementById('final-phase').classList.remove('hidden');
+        }
+
+        // Génération du bracket
+        function generateBracket(players) {
+            const bracketContainer = document.getElementById('bracket-container');
+            bracketContainer.innerHTML = '';
+            
+            // Quart de finale
+            const quarterFinals = [];
+            for (let i = 0; i < players.length; i += 2) {
+                quarterFinals.push({
+                    player1: players[i],
+                    player2: players[i + 1],
+                    winner: null
+                });
+            }
+            tournament.finalBracket = [quarterFinals, [], []];
+            
+            // Afficher les quarts de finale
+            const quarterFinalsDiv = document.createElement('div');
+            quarterFinalsDiv.className = 'bracket-round';
+            quarterFinalsDiv.innerHTML = '<h3>Quarts de Finale</h3>';
+            
+            quarterFinals.forEach((match, index) => {
+                const matchDiv = document.createElement('div');
+                matchDiv.className = 'bracket-match';
+                matchDiv.innerHTML = `
+                    <div class="teams">
+                        <div class="team">${match.player1.name || 'Joueur ' + match.player1.id}</div>
+                        <div class="team">${match.player2.name || 'Joueur ' + match.player2.id}</div>
+                    </div>
+                    <input type="text" placeholder="Vainqueur" id="qf-winner-${index}">
+                    <button onclick="recordFinalMatch(0, ${index})">Enregistrer</button>
+                `;
+                quarterFinalsDiv.appendChild(matchDiv);
+            });
+            bracketContainer.appendChild(quarterFinalsDiv);
+            
+            // Demi-finales (à remplir plus tard)
+            const semiFinalsDiv = document.createElement('div');
+            semiFinalsDiv.className = 'bracket-round';
+            semiFinalsDiv.innerHTML = '<h3>Demi-Finales</h3>';
+            semiFinalsDiv.id = 'semi-finals';
+            bracketContainer.appendChild(semiFinalsDiv);
+            
+            // Finale (à remplir plus tard)
+            const finalDiv = document.createElement('div');
+            finalDiv.className = 'bracket-round';
+            finalDiv.innerHTML = '<h3>Finale</h3>';
+            finalDiv.id = 'final';
+            bracketContainer.appendChild(finalDiv);
+        }
+
+        // Enregistrement d'un match de la phase finale
+        function recordFinalMatch(round, matchIndex) {
+            const winnerName = document.getElementById(`qf-winner-${matchIndex}`).value;
+            
+            if (round === 0) { // Quart de finale
+                const match = tournament.finalBracket[round][matchIndex];
+                const winner = match.player1.name === winnerName ? match.player1 : match.player2;
+                tournament.finalBracket[round][matchIndex].winner = winner;
+                
+                // Mise à jour des demi-finales
+                if (matchIndex % 2 === 1 || matchIndex === tournament.finalBracket[0].length - 1) {
+                    const semiFinals = [];
+                    for (let i = 0; i < tournament.finalBracket[0].length; i += 2) {
+                        if (tournament.finalBracket[0][i].winner && tournament.finalBracket[0][i + 1].winner) {
+                            semiFinals.push({
+                                player1: tournament.finalBracket[0][i].winner,
+                                player2: tournament.finalBracket[0][i + 1].winner,
+                                winner: null
+                            });
+                        }
+                    }
+                    tournament.finalBracket[1] = semiFinals;
+                    updateSemiFinals();
+                }
+            }
+        }
+
+        // Mise à jour des demi-finales
+        function updateSemiFinals() {
+            const semiFinalsDiv = document.getElementById('semi-finals');
+            semiFinalsDiv.innerHTML = '<h3>Demi-Finales</h3>';
+            
+            tournament.finalBracket[1].forEach((match, index) => {
+                const matchDiv = document.createElement('div');
+                matchDiv.className = 'bracket-match';
+                matchDiv.innerHTML = `
+                    <div class="teams">
+                        <div class="team">${match.player1.name}</div>
+                        <div class="team">${match.player2.name}</div>
+                    </div>
+                    <input type="text" placeholder="Vainqueur" id="sf-winner-${index}">
+                    <button onclick="recordSemiFinal(${index})">Enregistrer</button>
+                `;
+                semiFinalsDiv.appendChild(matchDiv);
+            });
+        }
+
+        // Enregistrement d'une demi-finale
+        function recordSemiFinal(matchIndex) {
+            const winnerName = document.getElementById(`sf-winner-${matchIndex}`).value;
+            const match = tournament.finalBracket[1][matchIndex];
+            const winner = match.player1.name === winnerName ? match.player1 : match.player2;
+            tournament.finalBracket[1][matchIndex].winner = winner;
+            
+            // Mise à jour de la finale
+            if (tournament.finalBracket[1].length === 2) {
+                const finalMatch = {
+                    player1: tournament.finalBracket[1][0].winner,
+                    player2: tournament.finalBracket[1][1].winner,
+                    winner: null
+                };
+                tournament.finalBracket[2] = [finalMatch];
+                updateFinal();
+            }
+        }
+
+        // Mise à jour de la finale
+        function updateFinal() {
+            const finalDiv = document.getElementById('final');
+            finalDiv.innerHTML = '<h3>Finale</h3>';
+            
+            const match = tournament.finalBracket[2][0];
+            const matchDiv = document.createElement('div');
+            matchDiv.className = 'bracket-match';
+            matchDiv.innerHTML = `
+                <div class="teams">
+                    <div class="team">${match.player1.name}</div>
+                    <div class="team">${match.player2.name}</div>
+                </div>
+                <input type="text" placeholder="Vainqueur" id="final-winner">
+                <button onclick="recordFinal()">Enregistrer</button>
+            `;
+            finalDiv.appendChild(matchDiv);
+        }
+
+        // Enregistrement de la finale
+        function recordFinal() {
+            const winnerName = document.getElementById('final-winner').value;
+            const match = tournament.finalBracket[2][0];
+            const winner = match.player1.name === winnerName ? match.player1 : match.player2;
+            tournament.finalBracket[2][0].winner = winner;
+            
+            // Afficher le vainqueur
+            alert(`Félicitations à ${winner.name}, vainqueur du tournoi !`);
+        }
+
+        // Initialisation au chargement de la page
+        window.onload = initPools;
+    </script>
+</body>
+</html>
