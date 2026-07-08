@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dart Tournament - Gestion de Tournois</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Section de connexion/inscription (masquée après connexion) -->
+    <div id="auth-section" class="auth-section">
+        <div class="auth-container">
+            <h1>Dart Tournament</h1>
+            <div id="login-form" class="auth-form">
+                <h2>Connexion</h2>
+                <form id="form-login">
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-password" placeholder="Mot de passe" required>
+                    <button type="submit">Se connecter</button>
+                </form>
+                <p>Pas de compte ? <button onclick="showRegister()">S'inscrire</button></p>
+            </div>
+            <div id="register-form" class="auth-form" style="display: none;">
+                <h2>Inscription</h2>
+                <form id="form-register">
+                    <input type="email" id="register-email" placeholder="Email" required>
+                    <input type="password" id="register-password" placeholder="Mot de passe" required>
+                    <button type="submit">S'inscrire</button>
+                </form>
+                <p>Déjà un compte ? <button onclick="showLogin()">Se connecter</button></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Section principale de l'app (masquée avant connexion) -->
+    <div id="app-section" style="display: none;">
+        <div class="header">
+            <h1>Dart Tournament</h1>
+            <div class="user-info">
+                <span>Connecté en tant que : <strong id="user-email"></strong></span>
+                <button onclick="logout()" class="btn-logout">Se déconnecter</button>
+            </div>
+        </div>
+
+        <!-- Configuration du tournoi -->
+        <div class="config-section">
+            <h2>Configuration du Tournoi</h2>
+            <div class="config-form">
+                <div>
+                    <label for="tournament-name">Nom du tournoi :</label>
+                    <input type="text" id="tournament-name" placeholder="Mon Tournoi Darts">
+                </div>
+                <div>
+                    <label for="num-pools">Nombre de pools :</label>
+                    <input type="number" id="num-pools" value="4" min="1" max="10">
+                </div>
+                <div>
+                    <label for="players-per-pool">Joueurs par pool :</label>
+                    <input type="number" id="players-per-pool" value="4" min="2" max="10">
+                </div>
+                <div>
+                    <label for="matches-per-pool">Matchs par pool :</label>
+                    <input type="number" id="matches-per-pool" value="3" min="1" max="10">
+                </div>
+                <button onclick="initPools()">Appliquer la configuration</button>
+            </div>
+        </div>
+
+        <!-- Phase de Poules -->
+        <div class="phase" id="pool-phase">
+            <h2>Phase de Poules</h2>
+            <div class="pool" id="pools-container"></div>
+            <div class="controls">
+                <button onclick="generatePoolMatches()">Générer les matchs de poule</button>
+                <button onclick="showPoolRankings()" class="hidden" id="show-rankings-btn">Afficher les classements</button>
+            </div>
+            <div id="pool-matches-container"></div>
+        </div>
+
+        <!-- Classement des Pools -->
+        <div class="phase hidden" id="ranking-phase">
+            <h2>Classements des Pools</h2>
+            <div id="rankings-container"></div>
+            <div class="stats-section">
+                <h2>Statistiques des Joueurs</h2>
+                <div class="stats-grid" id="stats-container"></div>
+            </div>
+            <div class="controls">
+                <button onclick="finalizePoolPhase()" id="finalize-pool-btn">Passer à la phase finale</button>
+                <button onclick="backToPoolPhase()" id="back-to-pool-btn">Retour aux matchs de poule</button>
+            </div>
+        </div>
+
+        <!-- Phase Finale -->
+        <div class="phase hidden" id="final-phase">
+            <h2>Phase Finale (Bracket)</h2>
+            <div class="bracket" id="bracket-container"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
