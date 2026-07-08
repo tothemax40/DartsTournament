@@ -24,7 +24,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'ta_cle_secrete_par_defaut',
   resave: false,
   saveUninitialized: false,
-  store: MongoStore.create({
+  store: new MongoStore({
     mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/dartstournament_db',
     ttl: 14 * 24 * 60 * 60 // 14 jours
   }),
