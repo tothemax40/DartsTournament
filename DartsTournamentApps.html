@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Organisateur de Tournoi - Version Complète</title>
+    <title>Organisateur de Tournoi - Sauvegarde Auto</title>
     <style>
         :root {
             --primary-color: #2196F3;
@@ -457,6 +457,7 @@
             justify-content: center;
             gap: 10px;
             margin-top: 10px;
+            flex-wrap: wrap;
         }
         
         .save-load-controls input[type="file"] {
@@ -476,6 +477,14 @@
         .file-input-label:hover {
             background-color: var(--button-hover);
         }
+        
+        .auto-save-notification {
+            text-align: center;
+            font-size: 14px;
+            color: var(--secondary-color);
+            margin-top: 5px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -493,36 +502,41 @@
         
         <h1 class="tournament-title" id="tournament-title">Organisateur de Tournoi</h1>
         
+        <!-- Sauvegarde Auto -->
+        <div class="save-load-controls">
+            <button onclick="newTournament()">🆕 Nouveau Tournoi</button>
+            <button onclick="deleteSavedTournament()">🗑️ Supprimer la sauvegarde</button>
+            <label for="load-file" class="file-input-label">📂 Importer un tournoi</label>
+            <input type="file" id="load-file" accept=".json" onchange="loadTournament(event)">
+            <button onclick="exportTournament()">💾 Exporter le tournoi</button>
+            <button onclick="exportStats()">📊 Exporter les statistiques</button>
+        </div>
+        <div class="auto-save-notification" id="auto-save-notification">
+            Sauvegarde automatique activée (localStorage)
+        </div>
+
         <!-- Configuration -->
         <div class="config-section">
             <h2>Configuration du Tournoi</h2>
             <div class="config-form">
                 <div>
                     <label for="tournament-name">Nom du tournoi :</label>
-                    <input type="text" id="tournament-name" placeholder="Mon Tournoi" value="">
+                    <input type="text" id="tournament-name" placeholder="Mon Tournoi" value="" onchange="saveToLocalStorage()">
                 </div>
                 <div>
                     <label for="num-pools">Nombre de pools :</label>
-                    <input type="number" id="num-pools" value="4" min="1" max="10">
+                    <input type="number" id="num-pools" value="4" min="1" max="10" onchange="saveToLocalStorage()">
                 </div>
                 <div>
                     <label for="players-per-pool">Joueurs par pool :</label>
-                    <input type="number" id="players-per-pool" value="4" min="2" max="10">
+                    <input type="number" id="players-per-pool" value="4" min="2" max="10" onchange="saveToLocalStorage()">
                 </div>
                 <div>
                     <label for="matches-per-pool">Matchs par pool :</label>
-                    <input type="number" id="matches-per-pool" value="3" min="1" max="10">
+                    <input type="number" id="matches-per-pool" value="3" min="1" max="10" onchange="saveToLocalStorage()">
                 </div>
                 <button onclick="initPools()">Appliquer la configuration</button>
             </div>
-        </div>
-
-        <!-- Sauvegarde/Chargement -->
-        <div class="save-load-controls">
-            <button onclick="saveTournament()">💾 Sauvegarder le tournoi</button>
-            <label for="load-file" class="file-input-label">📂 Charger un tournoi</label>
-            <input type="file" id="load-file" accept=".json" onchange="loadTournament(event)">
-            <button onclick="exportStats()">📊 Exporter les statistiques</button>
         </div>
 
         <!-- Phase de Poules -->
@@ -576,6 +590,92 @@
             }
         };
 
+        // Charger le tournoi depuis le localStorage au démarrage
+        function loadFromLocalStorage() {
+            const savedTournament = localStorage.getItem('tournament');
+            if (savedTournament) {
+                try {
+                    const data = JSON.parse(savedTournament);
+                    tournament.name = data.name || 'Tournoi sauvegardé';
+                    tournament.config = data.config || { numPools: 4, playersPerPool: 4, matchesPerPool: 3 };
+                    tournament.pools = data.pools || [];
+                    tournament.finalBracket = data.finalBracket || [];
+                    
+                    // Mettre à jour le titre
+                    document.getElementById('tournament-title').textContent = tournament.name;
+                    document.getElementById('tournament-name').value = tournament.name;
+                    document.getElementById('num-pools').value = tournament.config.numPools;
+                    document.getElementById('players-per-pool').value = tournament.config.playersPerPool;
+                    document.getElementById('matches-per-pool').value = tournament.config.matchesPerPool;
+                    
+                    // Reconstruire les pools
+                    const poolsContainer = document.getElementById('pools-container');
+                    poolsContainer.innerHTML = '';
+                    
+                    tournament.pools.forEach((pool, poolIndex) => {
+                        const poolDiv = document.createElement('div');
+                        poolDiv.className = 'pool-group';
+                        poolDiv.innerHTML = `
+                            <h3>${pool.name}</h3>
+                            ${pool.players.map((player, index) => `
+                                <div class="player">
+                                    <input type="text" value="${player.name || 'Joueur ' + (index + 1)}" 
+                                           onchange="updatePlayerName(${poolIndex}, ${index}, this.value); saveToLocalStorage();">
+                                    <span class="points" id="points-${poolIndex}-${index}">${player.totalPoints}</span>
+                                </div>
+                            `).join('')}
+                        `;
+                        poolsContainer.appendChild(poolDiv);
+                    });
+                    
+                    // Si des matchs de poule existent, les afficher
+                    if (tournament.pools.length > 0 && tournament.pools[0].players[0].matchesPlayed > 0) {
+                        generatePoolMatches();
+                        document.getElementById('show-rankings-btn').classList.remove('hidden');
+                    }
+                    
+                    // Si le bracket existe, l'afficher
+                    if (tournament.finalBracket.length > 0) {
+                        const finalists = [];
+                        tournament.pools.forEach(pool => {
+                            finalists.push(pool.players[0]);
+                            finalists.push(pool.players[1]);
+                        });
+                        generateBracket(finalists);
+                        document.getElementById('pool-phase').classList.add('hidden');
+                        document.getElementById('ranking-phase').classList.add('hidden');
+                        document.getElementById('final-phase').classList.remove('hidden');
+                    }
+                    
+                    console.log("Tournoi chargé depuis le localStorage");
+                } catch (error) {
+                    console.error("Erreur lors du chargement du tournoi :", error);
+                }
+            }
+        }
+
+        // Sauvegarder dans le localStorage
+        function saveToLocalStorage() {
+            const data = {
+                name: tournament.name,
+                config: tournament.config,
+                pools: tournament.pools.map(pool => ({
+                    id: pool.id,
+                    name: pool.name,
+                    players: pool.players.map(player => ({
+                        id: player.id,
+                        name: player.name,
+                        totalPoints: player.totalPoints,
+                        wins: player.wins,
+                        matchesPlayed: player.matchesPlayed
+                    }))
+                })),
+                finalBracket: tournament.finalBracket
+            };
+            localStorage.setItem('tournament', JSON.stringify(data));
+            console.log("Tournoi sauvegardé dans le localStorage");
+        }
+
         // Initialisation des pools
         function initPools() {
             const tournamentName = document.getElementById('tournament-name').value || 'Organisateur de Tournoi';
@@ -587,6 +687,7 @@
             tournament.config = { numPools, playersPerPool, matchesPerPool };
             tournament.pools = [];
             tournament.poolMatches = [];
+            tournament.finalBracket = [];
             
             // Mettre à jour le titre du tournoi
             document.getElementById('tournament-title').textContent = tournamentName;
@@ -615,7 +716,7 @@
                     ${pool.players.map((player, index) => `
                         <div class="player">
                             <input type="text" placeholder="Joueur ${index + 1}" 
-                                   onchange="updatePlayerName(${i}, ${index}, this.value)">
+                                   onchange="updatePlayerName(${i}, ${index}, this.value); saveToLocalStorage();">
                             <span class="points" id="points-${i}-${index}">0</span>
                         </div>
                     `).join('')}
@@ -629,11 +730,151 @@
             document.getElementById('ranking-phase').classList.add('hidden');
             document.getElementById('final-phase').classList.add('hidden');
             document.getElementById('pool-phase').classList.remove('hidden');
+            
+            // Sauvegarder dans le localStorage
+            saveToLocalStorage();
+        }
+
+        // Nouveau tournoi
+        function newTournament() {
+            localStorage.removeItem('tournament');
+            location.reload();
+        }
+
+        // Supprimer la sauvegarde
+        function deleteSavedTournament() {
+            localStorage.removeItem('tournament');
+            alert("Sauvegarde supprimée. Actualisez la page pour démarrer un nouveau tournoi.");
+        }
+
+        // Exporter le tournoi (fichier JSON)
+        function exportTournament() {
+            const data = {
+                name: tournament.name,
+                config: tournament.config,
+                pools: tournament.pools.map(pool => ({
+                    id: pool.id,
+                    name: pool.name,
+                    players: pool.players.map(player => ({
+                        id: player.id,
+                        name: player.name,
+                        totalPoints: player.totalPoints,
+                        wins: player.wins,
+                        matchesPlayed: player.matchesPlayed
+                    }))
+                })),
+                finalBracket: tournament.finalBracket
+            };
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${tournament.name || 'tournoi'}_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Charger un tournoi depuis un fichier
+        function loadTournament(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    tournament.name = data.name || 'Tournoi chargé';
+                    tournament.config = data.config || { numPools: 4, playersPerPool: 4, matchesPerPool: 3 };
+                    tournament.pools = data.pools || [];
+                    tournament.finalBracket = data.finalBracket || [];
+                    
+                    // Mettre à jour le titre
+                    document.getElementById('tournament-title').textContent = tournament.name;
+                    document.getElementById('tournament-name').value = tournament.name;
+                    document.getElementById('num-pools').value = tournament.config.numPools;
+                    document.getElementById('players-per-pool').value = tournament.config.playersPerPool;
+                    document.getElementById('matches-per-pool').value = tournament.config.matchesPerPool;
+                    
+                    // Reconstruire les pools
+                    const poolsContainer = document.getElementById('pools-container');
+                    poolsContainer.innerHTML = '';
+                    
+                    tournament.pools.forEach((pool, poolIndex) => {
+                        const poolDiv = document.createElement('div');
+                        poolDiv.className = 'pool-group';
+                        poolDiv.innerHTML = `
+                            <h3>${pool.name}</h3>
+                            ${pool.players.map((player, index) => `
+                                <div class="player">
+                                    <input type="text" value="${player.name || 'Joueur ' + (index + 1)}" 
+                                           onchange="updatePlayerName(${poolIndex}, ${index}, this.value); saveToLocalStorage();">
+                                    <span class="points" id="points-${poolIndex}-${index}">${player.totalPoints}</span>
+                                </div>
+                            `).join('')}
+                        `;
+                        poolsContainer.appendChild(poolDiv);
+                    });
+                    
+                    // Sauvegarder dans le localStorage
+                    saveToLocalStorage();
+                    
+                    // Réinitialiser les autres phases
+                    document.getElementById('pool-matches-container').innerHTML = '';
+                    document.getElementById('show-rankings-btn').classList.add('hidden');
+                    document.getElementById('ranking-phase').classList.add('hidden');
+                    document.getElementById('final-phase').classList.add('hidden');
+                    document.getElementById('pool-phase').classList.remove('hidden');
+                    
+                    alert(`Tournoi "${tournament.name}" importé avec succès !`);
+                } catch (error) {
+                    alert("Erreur lors du chargement du fichier : " + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        // Exporter les statistiques
+        function exportStats() {
+            const allPlayers = [];
+            tournament.pools.forEach(pool => {
+                allPlayers.push(...pool.players);
+            });
+            
+            // Trier par points
+            allPlayers.sort((a, b) => b.totalPoints - a.totalPoints);
+            
+            const statsData = {
+                tournamentName: tournament.name,
+                date: new Date().toISOString().slice(0, 10),
+                totalPlayers: allPlayers.length,
+                totalPools: tournament.pools.length,
+                players: allPlayers.map(player => ({
+                    name: player.name || `Joueur ${player.id}`,
+                    totalPoints: player.totalPoints,
+                    wins: player.wins,
+                    matchesPlayed: player.matchesPlayed,
+                    averagePoints: (player.totalPoints / player.matchesPlayed).toFixed(2) || 0
+                }))
+            };
+            
+            const blob = new Blob([JSON.stringify(statsData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `stats_${tournament.name || 'tournoi'}_${new Date().toISOString().slice(0, 10)}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         }
 
         // Mise à jour du nom d'un joueur
         function updatePlayerName(poolIndex, playerIndex, name) {
             tournament.pools[poolIndex].players[playerIndex].name = name;
+            saveToLocalStorage();
         }
 
         // Génération des matchs de poule
@@ -688,6 +929,7 @@
             });
             
             document.getElementById('show-rankings-btn').classList.remove('hidden');
+            saveToLocalStorage();
         }
 
         // Mise à jour des options de rang en fonction des sélections
@@ -755,6 +997,8 @@
             button.textContent = 'Modifier';
             button.className = 'modify-btn';
             button.onclick = function() { modifyPoolMatch(poolIndex, matchIndex, button, matchDiv); };
+            
+            saveToLocalStorage();
         }
 
         // Modifier un match de poule
@@ -787,6 +1031,8 @@
             button.textContent = 'Enregistrer le match';
             button.className = '';
             button.onclick = function() { recordPoolMatch(poolIndex, matchIndex); };
+            
+            saveToLocalStorage();
         }
 
         // Mise à jour des points des joueurs dans un pool
@@ -858,6 +1104,8 @@
             // Masquer la phase de poule et afficher les classements
             document.getElementById('pool-phase').classList.add('hidden');
             document.getElementById('ranking-phase').classList.remove('hidden');
+            
+            saveToLocalStorage();
         }
 
         // Afficher les statistiques globales
@@ -924,6 +1172,8 @@
             // Masquer les classements et afficher la phase finale
             document.getElementById('ranking-phase').classList.add('hidden');
             document.getElementById('final-phase').classList.remove('hidden');
+            
+            saveToLocalStorage();
         }
 
         // Génération du bracket dynamique
@@ -1019,6 +1269,8 @@
                     bracketContainer.appendChild(connector);
                 }
             }
+            
+            saveToLocalStorage();
         }
 
         // Sélection du vainqueur dans un match
@@ -1093,6 +1345,8 @@
                 // C'est la finale, afficher le vainqueur
                 alert(`Félicitations à ${match.winner.name}, vainqueur du tournoi ${tournament.name} !`);
             }
+            
+            saveToLocalStorage();
         }
 
         // Mettre à jour l'affichage du tour suivant
@@ -1131,127 +1385,8 @@
                     });
                 }
             }
-        }
-
-        // Sauvegarder le tournoi
-        function saveTournament() {
-            const data = {
-                name: tournament.name,
-                config: tournament.config,
-                pools: tournament.pools.map(pool => ({
-                    id: pool.id,
-                    name: pool.name,
-                    players: pool.players.map(player => ({
-                        id: player.id,
-                        name: player.name,
-                        totalPoints: player.totalPoints,
-                        wins: player.wins,
-                        matchesPlayed: player.matchesPlayed
-                    }))
-                })),
-                finalBracket: tournament.finalBracket
-            };
             
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `${tournament.name || 'tournoi'}_${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // Charger un tournoi
-        function loadTournament(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const data = JSON.parse(e.target.result);
-                    tournament.name = data.name || 'Tournoi chargé';
-                    tournament.config = data.config || { numPools: 4, playersPerPool: 4, matchesPerPool: 3 };
-                    tournament.pools = data.pools || [];
-                    tournament.finalBracket = data.finalBracket || [];
-                    
-                    // Mettre à jour le titre
-                    document.getElementById('tournament-title').textContent = tournament.name;
-                    document.getElementById('tournament-name').value = tournament.name;
-                    document.getElementById('num-pools').value = tournament.config.numPools;
-                    document.getElementById('players-per-pool').value = tournament.config.playersPerPool;
-                    document.getElementById('matches-per-pool').value = tournament.config.matchesPerPool;
-                    
-                    // Reconstruire les pools
-                    const poolsContainer = document.getElementById('pools-container');
-                    poolsContainer.innerHTML = '';
-                    
-                    tournament.pools.forEach((pool, poolIndex) => {
-                        const poolDiv = document.createElement('div');
-                        poolDiv.className = 'pool-group';
-                        poolDiv.innerHTML = `
-                            <h3>${pool.name}</h3>
-                            ${pool.players.map((player, index) => `
-                                <div class="player">
-                                    <input type="text" value="${player.name || 'Joueur ' + (index + 1)}" 
-                                           onchange="updatePlayerName(${poolIndex}, ${index}, this.value)">
-                                    <span class="points" id="points-${poolIndex}-${index}">${player.totalPoints}</span>
-                                </div>
-                            `).join('')}
-                        `;
-                        poolsContainer.appendChild(poolDiv);
-                    });
-                    
-                    // Réinitialiser les autres phases
-                    document.getElementById('pool-matches-container').innerHTML = '';
-                    document.getElementById('show-rankings-btn').classList.add('hidden');
-                    document.getElementById('ranking-phase').classList.add('hidden');
-                    document.getElementById('final-phase').classList.add('hidden');
-                    document.getElementById('pool-phase').classList.remove('hidden');
-                    
-                    alert(`Tournoi "${tournament.name}" chargé avec succès !`);
-                } catch (error) {
-                    alert("Erreur lors du chargement du fichier : " + error.message);
-                }
-            };
-            reader.readAsText(file);
-        }
-
-        // Exporter les statistiques
-        function exportStats() {
-            const allPlayers = [];
-            tournament.pools.forEach(pool => {
-                allPlayers.push(...pool.players);
-            });
-            
-            // Trier par points
-            allPlayers.sort((a, b) => b.totalPoints - a.totalPoints);
-            
-            const statsData = {
-                tournamentName: tournament.name,
-                date: new Date().toISOString().slice(0, 10),
-                totalPlayers: allPlayers.length,
-                totalPools: tournament.pools.length,
-                players: allPlayers.map(player => ({
-                    name: player.name || `Joueur ${player.id}`,
-                    totalPoints: player.totalPoints,
-                    wins: player.wins,
-                    matchesPlayed: player.matchesPlayed,
-                    averagePoints: (player.totalPoints / player.matchesPlayed).toFixed(2) || 0
-                }))
-            };
-            
-            const blob = new Blob([JSON.stringify(statsData, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `stats_${tournament.name || 'tournoi'}_${new Date().toISOString().slice(0, 10)}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
+            saveToLocalStorage();
         }
 
         // Changer de thème
@@ -1303,7 +1438,8 @@
             document.getElementById('color-theme').value = savedColorTheme;
             changeColorTheme();
             
-            initPools();
+            // Charger le tournoi depuis le localStorage
+            loadFromLocalStorage();
         };
     </script>
 </body>
